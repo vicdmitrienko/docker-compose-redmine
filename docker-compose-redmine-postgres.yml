@@ -1,0 +1,50 @@
+name: 'cicd-0.2'
+
+services:
+  postgresql:
+    image: postgres
+    # set shared memory limit when using docker-compose
+    shm_size: 128mb
+    environment:
+      - DB_USER=redmine
+      - DB_PASS=password
+      - DB_NAME=redmine_production
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    volumes:
+      - ./storage/postgresql/data:/var/lib/postgresql/data
+    ports:
+      - 5430:5432
+#    restart: unless-stopped
+    healthcheck:
+      test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+
+  adminer:
+    image: adminer
+#    restart: always
+    ports:
+      - 8080:8080
+
+  redmine:
+    image: redmine
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      - TZ=Asia/Tomsk
+
+      - REDMINE_DB_POSTGRES=postgresql
+      - REDMINE_DB_DATABASE=redmine_production
+      - REDMINE_DB_USERNAME=redmine
+      - REDMINE_DB_PASSWORD=password
+
+    ports:
+      - "10083:3000"
+    volumes:
+      - ./storage/redmine/files:/usr/src/redmine/files
+      - ./storage/redmine/logs:/usr/src/redmine/log
